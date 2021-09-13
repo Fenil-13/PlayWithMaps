@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">PlayWithMaps</string>
+    <string name="MAPS_API_KEY">AIzaSyB_gLtPBMkV3i9KLcCYd7mP91w378S05Lg</string>
+    <string name="enter_the_location">ENTER THE LOCATION</string>
+</resources>
