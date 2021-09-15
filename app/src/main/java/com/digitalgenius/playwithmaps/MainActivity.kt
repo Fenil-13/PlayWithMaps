@@ -2,17 +2,24 @@ package com.digitalgenius.playwithmaps
 
 import android.Manifest
 import android.content.DialogInterface
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
+import android.location.Location
+import android.location.LocationManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.activity.result.ActivityResultCallback
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.ListAdapter
 import com.digitalgenius.playwithmaps.databinding.ActivityMainBinding
@@ -39,11 +46,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var mGoogleMap: GoogleMap
     private lateinit var supportMapFragment: SupportMapFragment
 
+    private lateinit var gpsLauncher:ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         _binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        gpsLauncher=registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+                if(checkGPSService()){
+                    Toast.makeText(this@MainActivity, "PERMISSION GIVEN", Toast.LENGTH_SHORT).show()
+                }else{
+                    takeGPSPermission()
+                }
+        }
+
 
         checkLocationServiceOk()
 
@@ -99,7 +118,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 addressList[checkedItem].latitude,
                                 addressList[which].longitude
                             )
-                            setMarkerForLocation(addressList[checkedItem].featureName,
+                            setMarkerForLocation(
+                                addressList[checkedItem].featureName,
                                 LatLng(
                                     addressList[checkedItem].latitude,
                                     addressList[checkedItem].longitude
@@ -117,6 +137,28 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
 
         }
+
+
+        binding.btnMyLocation.setOnClickListener {
+            if(checkGPSService()){
+                Toast.makeText(this@MainActivity, "PERMISSION GIVEN ALREADY", Toast.LENGTH_SHORT).show()
+            }else{
+                takeGPSPermission()
+            }
+        }
+    }
+
+    private fun takeGPSPermission() {
+        AlertDialog.Builder(this@MainActivity)
+            .setTitle("GPS Permission")
+            .setMessage("GPS is required for this services")
+            .setPositiveButton("Ok") { dialog, which ->
+                dialog.dismiss()
+                val intent=Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                gpsLauncher.launch(intent)
+            }
+            .setCancelable(false)
+            .show()
     }
 
 
@@ -174,6 +216,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         return false
     }
 
+    private fun checkGPSService():Boolean{
+        val locationManager=getSystemService(LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+    }
+
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -193,7 +241,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mGoogleMap = googleMap
 
         goToLocation(21.269487, 72.958216)
-        setMarkerForLocation("Default Location", LatLng(21.269487,72.958216))
+        setMarkerForLocation("Default Location", LatLng(21.269487, 72.958216))
         mGoogleMap.mapType = GoogleMap.MAP_TYPE_NORMAL
 
 
@@ -205,7 +253,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mGoogleMap.moveCamera(cameraUpdate)
     }
 
-    private fun setMarkerForLocation(title:String,latLng: LatLng) {
+    private fun setMarkerForLocation(title: String, latLng: LatLng) {
 
         val markerOption = MarkerOptions()
             .title(title)
