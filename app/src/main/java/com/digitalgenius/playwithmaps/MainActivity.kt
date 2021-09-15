@@ -1,23 +1,30 @@
 package com.digitalgenius.playwithmaps
 
 import android.Manifest
+import android.content.DialogInterface
 import android.content.pm.PackageManager
+import android.location.Geocoder
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.recyclerview.widget.ListAdapter
 import com.digitalgenius.playwithmaps.databinding.ActivityMainBinding
 import com.digitalgenius.playwithmaps.utils.Functions
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import java.util.*
+import kotlin.collections.ArrayList
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var _binding: ActivityMainBinding? = null
@@ -40,13 +47,78 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         checkLocationServiceOk()
 
+
+//        val googleMapOptions=GoogleMapOptions()
+//            .zoomControlsEnabled(true)
+
         supportMapFragment = SupportMapFragment.newInstance()
 
         supportFragmentManager.beginTransaction().add(R.id.fragmentContainer, supportMapFragment)
             .commit()
 
         supportMapFragment.getMapAsync(this@MainActivity)
+
+
+        binding.ivSearchLocation.setOnClickListener {
+            Functions.hideSoftKeyboard(this@MainActivity, it!!)
+
+            val locationName = binding.etLocation.text.toString()
+            if (locationName.isBlank()) {
+                Toast.makeText(this@MainActivity, "Please Enter Something", Toast.LENGTH_SHORT)
+                    .show()
+                return@setOnClickListener
+            }
+            val geocoder = Geocoder(this@MainActivity, Locale.getDefault())
+            try {
+                val addressList = geocoder.getFromLocationName(locationName, 5)
+
+                Log.d("MainActivity", "onCreate: ${addressList.size}")
+
+                if (addressList.size > 0) {
+                    val singleItems = Array(addressList.size) {
+                        addressList[it].featureName
+                    }
+
+                    for (i in 0 until addressList.size) {
+                        singleItems[i] = addressList[i].featureName
+                    }
+
+                    var checkedItem = 1
+
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Choose One Location")
+                        .setSingleChoiceItems(
+                            singleItems, checkedItem
+                        ) { dialog, which ->
+                            dialog.dismiss()
+                            checkedItem = which
+                        }
+                        .setPositiveButton(R.string.choose) { dialog, which ->
+                            binding.etLocation.setText(addressList[checkedItem].featureName)
+                            goToLocation(
+                                addressList[checkedItem].latitude,
+                                addressList[which].longitude
+                            )
+                            setMarkerForLocation(addressList[checkedItem].featureName,
+                                LatLng(
+                                    addressList[checkedItem].latitude,
+                                    addressList[checkedItem].longitude
+                                )
+                            )
+                        }.setNegativeButton(R.string.cancel) { dialog, which ->
+                            dialog.dismiss()
+                        }
+                        .show()
+
+                }
+            } catch (e: Exception) {
+                Log.d("MainActivity", "onCreate: ${e.message}")
+            }
+
+
+        }
     }
+
 
     private fun initGoogleMap() {
         if (checkServicesOk()) {
@@ -120,38 +192,48 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         mGoogleMap = googleMap
 
-        goToLocation(21.269487,72.958216)
+        goToLocation(21.269487, 72.958216)
+        setMarkerForLocation("Default Location", LatLng(21.269487,72.958216))
+        mGoogleMap.mapType = GoogleMap.MAP_TYPE_NORMAL
+
 
     }
 
-    fun goToLocation(lat:Double,lng:Double){
-        val latLng=LatLng(lat,lng)
-        val cameraUpdate=CameraUpdateFactory.newLatLngZoom(latLng,7.0f)
+    fun goToLocation(lat: Double, lng: Double) {
+        val latLng = LatLng(lat, lng)
+        val cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 7.0f)
         mGoogleMap.moveCamera(cameraUpdate)
-        mGoogleMap.mapType=GoogleMap.MAP_TYPE_NORMAL
+    }
+
+    private fun setMarkerForLocation(title:String,latLng: LatLng) {
+
+        val markerOption = MarkerOptions()
+            .title(title)
+            .position(latLng)
+        mGoogleMap.addMarker(markerOption)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.map_type_menu,menu)
+        menuInflater.inflate(R.menu.map_type_menu, menu)
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when(item.itemId){
-            R.id.mapTypeNon->{
-                mGoogleMap.mapType=GoogleMap.MAP_TYPE_NONE
+        when (item.itemId) {
+            R.id.mapTypeNon -> {
+                mGoogleMap.mapType = GoogleMap.MAP_TYPE_NONE
             }
-            R.id.mapTypeNormal->{
-                mGoogleMap.mapType=GoogleMap.MAP_TYPE_NORMAL
+            R.id.mapTypeNormal -> {
+                mGoogleMap.mapType = GoogleMap.MAP_TYPE_NORMAL
             }
-            R.id.mapTypeHybrid->{
-                mGoogleMap.mapType=GoogleMap.MAP_TYPE_HYBRID
+            R.id.mapTypeHybrid -> {
+                mGoogleMap.mapType = GoogleMap.MAP_TYPE_HYBRID
             }
-            R.id.mapTypeSatelite->{
-                mGoogleMap.mapType=GoogleMap.MAP_TYPE_SATELLITE
+            R.id.mapTypeSatelite -> {
+                mGoogleMap.mapType = GoogleMap.MAP_TYPE_SATELLITE
             }
-            R.id.mapTypeTerrain->{
-                mGoogleMap.mapType=GoogleMap.MAP_TYPE_TERRAIN
+            R.id.mapTypeTerrain -> {
+                mGoogleMap.mapType = GoogleMap.MAP_TYPE_TERRAIN
             }
         }
         return super.onOptionsItemSelected(item)

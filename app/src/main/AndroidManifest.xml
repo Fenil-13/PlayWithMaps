@@ -20,7 +20,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-<!--        AIzaSyB_gLtPBMkV3i9KLcCYd7mP91w378S05Lg-->
         <uses-library android:name="org.apache.http.legacy"
             android:required="false"/>
         <meta-data
