@@ -1,6 +1,7 @@
 package com.digitalgenius.playwithmaps
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -21,11 +22,14 @@ import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.ListAdapter
 import com.digitalgenius.playwithmaps.databinding.ActivityMainBinding
 import com.digitalgenius.playwithmaps.utils.Functions
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
@@ -46,23 +50,27 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var mGoogleMap: GoogleMap
     private lateinit var supportMapFragment: SupportMapFragment
 
-    private lateinit var gpsLauncher:ActivityResultLauncher<Intent>
+    private lateinit var gpsLauncher: ActivityResultLauncher<Intent>
+
+    private lateinit var mLocationClient: FusedLocationProviderClient
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         _binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        gpsLauncher=registerForActivityResult(
+        gpsLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) {
-                if(checkGPSService()){
-                    Toast.makeText(this@MainActivity, "PERMISSION GIVEN", Toast.LENGTH_SHORT).show()
-                }else{
-                    takeGPSPermission()
-                }
+            if (checkGPSService()) {
+                Toast.makeText(this@MainActivity, "PERMISSION GRANDTED", Toast.LENGTH_SHORT).show()
+            } else {
+                takeGPSPermission()
+            }
         }
 
+
+        mLocationClient = LocationServices.getFusedLocationProviderClient(this@MainActivity)
 
         checkLocationServiceOk()
 
@@ -140,12 +148,41 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
 
         binding.btnMyLocation.setOnClickListener {
-            if(checkGPSService()){
-                Toast.makeText(this@MainActivity, "PERMISSION GIVEN ALREADY", Toast.LENGTH_SHORT).show()
-            }else{
+            if (checkGPSService()) {
+                getOwnCurrentLocation()
+            } else {
                 takeGPSPermission()
             }
         }
+    }
+
+
+    private fun getOwnCurrentLocation() {
+        try {
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                checkLocationServiceOk()
+                return
+            }
+            mLocationClient.lastLocation.addOnCompleteListener {
+                Log.d("MainActivity", "getOwnCurrentLocation: ${it.isSuccessful}")
+                if (it.isSuccessful) {
+                    val location = it.result
+                    setMarkerForLocation("Your Location",LatLng(location.latitude,location.longitude))
+                }
+            }.addOnFailureListener {
+                Toast.makeText(this@MainActivity, "${it.message}", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this@MainActivity, "${e.message}", Toast.LENGTH_SHORT).show()
+        }
+
     }
 
     private fun takeGPSPermission() {
@@ -154,7 +191,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             .setMessage("GPS is required for this services")
             .setPositiveButton("Ok") { dialog, which ->
                 dialog.dismiss()
-                val intent=Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
                 gpsLauncher.launch(intent)
             }
             .setCancelable(false)
@@ -216,8 +253,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         return false
     }
 
-    private fun checkGPSService():Boolean{
-        val locationManager=getSystemService(LOCATION_SERVICE) as LocationManager
+    private fun checkGPSService(): Boolean {
+        val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
     }
 
@@ -244,10 +281,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         setMarkerForLocation("Default Location", LatLng(21.269487, 72.958216))
         mGoogleMap.mapType = GoogleMap.MAP_TYPE_NORMAL
 
-
     }
 
-    fun goToLocation(lat: Double, lng: Double) {
+    private fun goToLocation(lat: Double, lng: Double) {
         val latLng = LatLng(lat, lng)
         val cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 7.0f)
         mGoogleMap.moveCamera(cameraUpdate)
