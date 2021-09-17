@@ -4,4 +4,11 @@
     <string name="enter_the_location">ENTER THE LOCATION</string>
     <string name="cancel">Cancel</string>
     <string name="choose">Choose</string>
+    <string name="location_markdown">Location Markdown</string>
+    
+    <plurals name="num_location_reported">
+        <item quantity="zero">No Location reported</item>
+        <item quantity="one">One Location reported</item>
+        <item quantity="other">%d Location reported</item>
+    </plurals>
 </resources>

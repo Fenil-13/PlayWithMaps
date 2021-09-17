@@ -1,30 +1,22 @@
 package com.digitalgenius.playwithmaps
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
-import android.location.Location
 import android.location.LocationManager
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
-import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
-import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.recyclerview.widget.ListAdapter
 import com.digitalgenius.playwithmaps.databinding.ActivityMainBinding
 import com.digitalgenius.playwithmaps.utils.Functions
 import com.google.android.gms.common.ConnectionResult
@@ -33,9 +25,7 @@ import com.google.android.gms.location.*
 import com.google.android.gms.maps.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.*
-import kotlin.collections.ArrayList
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var _binding: ActivityMainBinding? = null
@@ -59,7 +49,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         override fun onLocationResult(locationResult: LocationResult) {
             super.onLocationResult(locationResult)
             val location = locationResult.lastLocation
-            Log.d("MainActivity", "onLocationResult: ${location.latitude}  ${location.longitude}")
+            binding.tvResult.text="${location.latitude}  ${location.longitude}"
 
         }
     }
@@ -175,6 +165,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             } else {
                 takeGPSPermission()
             }
+        }
+
+
+        binding.btnGoBatchActivity.setOnClickListener {
+            startActivity(Intent(this@MainActivity,BatchLocationActivity::class.java))
         }
     }
 
@@ -368,7 +363,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mLocationClient.requestLocationUpdates(
             locationRequest,
             mLocationCallback,
-            Looper.getMainLooper()
+            null
         )
     }
 
